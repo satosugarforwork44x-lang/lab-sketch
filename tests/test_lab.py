@@ -235,5 +235,79 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(sorted(r["made"]), sorted([e["name"], j["name"]]))
 
 
+class SkillTest(ApiTest.__bases__[0]):
+    """skill: ひな形 → 検査 → 検算 → zip。"""
+
+    def setUp(self):
+        ApiTest.setUp(self)
+        src = self.out / "p.pdf"
+        src.write_bytes(b"%PDF-1.4\n%x\n")
+        self.api.import_pdfs([{"path": str(src), "name": "2024_Smith_X"}], "copy")
+
+    def _fill(self, d):
+        p = d / "SKILL.md"
+        p.write_text(p.read_text(encoding="utf-8").replace('"（いつ使うか。例: 〇〇の値を、著者 年 の式で計算・検査するとき）"',
+                                                          '"閉じた管の共鳴周波数を計算・検査するとき"'), encoding="utf-8")
+
+    def test_template_to_zip(self):
+        v = self.api.skill_new("pipe-res", "2024_Smith_X")
+        d = Path(v["path"])
+        self.assertEqual(self.api.card("2024_Smith_X")["meta"]["skills"], ["pipe-res"])
+        self.assertTrue(any("description" in e for e in v["lint"]["errors"]))       # ひな形のままでは検算しない
+        self.assertEqual(self.api.skill_verify("pipe-res")["stage"], "lint")
+        self._fill(d)
+        r = self.api.skill_verify("pipe-res")
+        self.assertTrue(r["ok"], r)
+        self.assertTrue(r["status"]["verified"])
+        self.assertEqual(self.api.skills()["skills"][0]["papers"][0]["name"], "2024_Smith_X")
+        z = Path(self.api.skill_zip("pipe-res")["path"])
+        import zipfile
+        names = zipfile.ZipFile(z).namelist()
+        self.assertIn("pipe-res/SKILL.md", names)
+        self.assertIn("pipe-res/scripts/calc.py", names)
+        self.assertFalse(any(".verified" in n or "__pycache__" in n for n in names))
+        self.assertEqual(z.parent.name, "export")
+        self.assertEqual(Path(self.api.skill_zip("pipe-res")["path"]).name, "pipe-res (2).zip")   # 上書きしない
+        # 検算の後に中身が変わったら zip は作れない
+        calc = d / "scripts" / "calc.py"
+        calc.write_text(calc.read_text(encoding="utf-8").replace("4.0 * v", "2.0 * v"), encoding="utf-8")
+        self.assertFalse(self.api.skill_view("pipe-res")["status"]["verified"])
+        with self.assertRaises(self.api.LabError):
+            self.api.skill_zip("pipe-res")
+        r = self.api.skill_verify("pipe-res")                                        # 式を壊したので合わない
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["check"]["data"]["summary"]["ng"], 2)
+        self.assertTrue(any("2 倍" in c for c in r["check"]["data"]["causes"]))
+
+    def test_dangerous_code_is_not_run(self):
+        d = Path(self.api.skill_new("bad-one")["path"])
+        self._fill(d)
+        calc = d / "scripts" / "calc.py"
+        base = calc.read_text(encoding="utf-8")
+        for snippet, word in (("import socket\n", "socket"), ("import urllib.request\n", "urllib"),
+                              ("import subprocess\n", "subprocess"), ("open('x.txt', 'w')\n", "open()"),
+                              ("eval('1')\n", "eval"), ("from pathlib import Path\nPath('x').unlink()\n", "unlink")):
+            calc.write_text(snippet + base, encoding="utf-8")
+            r = self.api.skill_verify("bad-one")
+            self.assertEqual(r["stage"], "lint", snippet)
+            self.assertTrue(any(word in e for e in r["errors"]), (snippet, r["errors"]))
+        self.assertFalse((d / "x.txt").exists())
+
+    def test_timeout(self):
+        d = Path(self.api.skill_new("slow-one")["path"])
+        self._fill(d)
+        calc = d / "scripts" / "calc.py"
+        calc.write_text(calc.read_text(encoding="utf-8").replace("    v, warnings = _read(inputs)", "    while True:\n        pass"), encoding="utf-8")
+        self.api.verify.TIMEOUT = 2
+        r = self.api.skill_verify("slow-one")
+        self.assertFalse(r["ok"])
+        self.assertIn("秒", r["calc"]["error"])
+
+    def test_bad_names(self):
+        for n in ("Baffle", "baffle_step", "../x", "-a", "a" * 65):
+            with self.assertRaises(self.api.LabError):
+                self.api.skill_new(n)
+
+
 if __name__ == "__main__":
     unittest.main()

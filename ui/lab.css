@@ -91,3 +91,61 @@
 .lab-imp-row .msg:empty { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .lab-row { transition: none; } }
+
+/* ---- 論文 / エンジン ---- */
+.lab-mode { flex: none; }
+.lab-mode button { height: 26px; padding: 0 12px; font: 12px var(--font); }
+.lab-mode .icon { width: 14px; height: 14px; }
+.lab-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--pill); background: var(--ink-2); color: var(--muted); font-size: 11px; white-space: nowrap; }
+.lab-badge .icon { width: 13px; height: 13px; }
+.lab-badge.ok { background: var(--tint); color: var(--text); }
+.lab-badge.ok .icon { color: var(--signal); }
+.lab-badge.warn { color: var(--danger); }
+.lab-erow { grid-template-columns: 32px minmax(0, 1fr) auto; }
+.lab-erow .eico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-s); background: var(--ink-2); color: var(--signal); }
+.lab-erow .t { font-family: Consolas, "Cascadia Mono", monospace; }
+.lab-erow .side { justify-items: end; }
+
+/* カードの中のエンジン */
+.lab-cengines .list { display: grid; gap: 4px; }
+.lab-cengines .erow { display: flex; align-items: center; gap: 8px; }
+.lab-cengines .ename { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 10px; border: 0; border-radius: var(--r-s); background: var(--ink-2); color: var(--text); font: 12.5px Consolas, "Cascadia Mono", monospace; cursor: pointer; }
+.lab-cengines .ename:hover { background: var(--ink-3); }
+.lab-cengines .ename .icon { color: var(--signal); width: 14px; height: 14px; }
+.lab-cengines .x { width: 24px; height: 24px; margin-left: auto; }
+.lab-cengines .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.lab-cengines .row .btn { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 12px; }
+
+/* 1 つのエンジン */
+.lab-ename { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px Consolas, "Cascadia Mono", monospace; }
+.lab-ename .icon { color: var(--signal); }
+.lab-cbar .btn:disabled { opacity: .45; cursor: default; }
+.lab-ebody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
+@media (max-width: 720px) { .lab-ebody { grid-template-columns: 1fr; grid-template-rows: auto minmax(300px, 1fr); overflow: auto; } }
+.lab-eside { overflow: auto; padding: 14px 16px 24px; border-right: 1px solid var(--line); }
+.lab-eside .desc { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; }
+.lab-eside .papers { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.lab-eside .papers .chip { height: auto; min-height: 22px; padding: 2px 10px; font-size: 11.5px; text-align: left; border: 0; cursor: pointer; }
+.lab-eside h4 { margin: 14px 0 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+.lab-eside h5 { margin: 10px 0 4px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.lab-eside p { margin: 0 0 4px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.lab-eside .note { color: var(--muted); }
+.lab-eside .err { color: var(--danger); }
+.lab-eside .wn { color: var(--muted); }
+.lab-eside .wn::before { content: "・"; }
+.lab-eside .okl { color: var(--signal); }
+.lab-eside .btn { height: 28px; padding: 0 12px; font-size: 12px; margin-top: 6px; }
+.lab-eside .se { max-height: 160px; overflow: auto; margin: 0; padding: 8px; border-radius: var(--r-s); background: var(--well); font: 11px/1.5 Consolas, monospace; white-space: pre-wrap; }
+.lab-tab { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.lab-tab th { white-space: nowrap; text-align: left; font-weight: 500; color: var(--faint); padding: 3px 4px; border-bottom: 1px solid var(--line); }
+.lab-tab td { padding: 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.lab-tab tr.ng td { color: var(--danger); }
+.lab-code { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.lab-code .tabs { display: flex; gap: 2px; padding: 8px 10px 0; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.lab-code .tabs button {
+  flex: none; height: 30px; padding: 0 12px; border: 0; border-radius: var(--r-s) var(--r-s) 0 0; background: transparent; color: var(--muted);
+  font: 12px Consolas, "Cascadia Mono", monospace; cursor: pointer;
+}
+.lab-code .tabs button[aria-selected="true"] { background: var(--ink-2); color: var(--text); }
+.lab-code .code { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 12px 16px 24px; background: var(--ink-2); font: 12px/1.6 Consolas, "Cascadia Mono", "BIZ UDGothic", monospace; color: var(--text); tab-size: 4; }
+.lab-tab small { color: var(--faint); }

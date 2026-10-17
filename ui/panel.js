@@ -4,6 +4,7 @@
 // ・カードの本文（要約など）は Claude が書く。ここでは読むだけ
 import { selectBox } from "/ui/js/hub.js";
 import { icons } from "/ui/js/icons.js";
+import { LE, drawEngineList, engineView, statusBadge } from "./engines.js";
 
 const EN = (document.documentElement.lang || navigator.language || "ja").startsWith("en");
 const L = EN ? {
@@ -53,6 +54,7 @@ export async function mount(el, ctx) {
   el.innerHTML = `<div class="lab">
     <section class="lab-home">
       <div class="lab-bar">
+        <div class="lab-mode seg" role="tablist"></div>
         <input class="lab-q" type="search">
         <button class="btn primary lab-add"></button>
         <button class="icon-btn lab-more"></button>
@@ -68,8 +70,19 @@ export async function mount(el, ctx) {
   </div>`;
   const $ = (s, r = el) => r.querySelector(s);
   const home = $(".lab-home"), cardView = $(".lab-card"), list = $(".lab-list"), notes = $(".lab-notes");
-  let st = null, sig = "", cur = null, saveTimer = 0;
+  let st = null, sig = "", cur = null, saveTimer = 0, mode = "papers", eng = null, engFrom = "";
   const f = { q: "", status: "", tag: "", year: "" };
+
+  // ---------- 論文 / エンジン ----------
+  for (const [v, label] of [["papers", LE.tabPapers], ["engines", LE.tabEngines]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.dataset.v = v;
+    b.innerHTML = `${ico(v === "papers" ? "bookOpen" : "sigma")}<span>${esc(label)}</span>`;
+    b.addEventListener("click", () => { mode = v; refresh(); });
+    $(".lab-mode").append(b);
+  }
 
   // ---------- 一覧 ----------
   $(".lab-q").placeholder = L.search;
@@ -181,6 +194,16 @@ export async function mount(el, ctx) {
   async function refresh() {
     st = await ctx.call("state");
     sig = (await ctx.call("poll")).sig;
+    for (const b of $(".lab-mode").children) on(b, b.dataset.v === mode);
+    const eng_ = mode === "engines";
+    $(".lab-q").hidden = eng_;
+    $(".lab-filter").hidden = eng_;
+    notes.hidden = eng_;
+    if (eng_) {
+      const r = await drawEngineList(ctx, list, (n) => openEngine(n));
+      ctx.setStatus(`${r.skills.length} · ${r.folder}`);
+      return;
+    }
     filters();
     drawNotes();
     drawList();
@@ -270,7 +293,19 @@ export async function mount(el, ctx) {
   });
 
   // ---------- 1 枚のカード ----------
+  function openEngine(name, from = "") {
+    cur = null;
+    engFrom = from;
+    home.hidden = true;
+    cardView.hidden = false;
+    eng = engineView(ctx, cardView, name, {
+      back: () => { eng = null; engFrom ? openCard(engFrom) : showHome(); },
+      copy, openCard: (n) => { eng = null; openCard(n); },
+    });
+  }
+
   async function openCard(name, quiet = false) {
+    eng = null;
     try { cur = await ctx.call("card", { name }); } catch (e) { ctx.toast(e.message, "error"); return showHome(); }
     home.hidden = true;
     cardView.hidden = false;
@@ -279,6 +314,7 @@ export async function mount(el, ctx) {
 
   function showHome() {
     cur = null;
+    eng = null;
     cardView.hidden = true;
     home.hidden = false;
     refresh();
@@ -303,6 +339,8 @@ export async function mount(el, ctx) {
             <label><span>${esc(L.doi)}</span><input data-k="doi"></label></div>
           <label><span>${esc(L.tags)}</span><input data-k="tags"></label>
           <div class="field"><span>${esc(L.state)}</span><div class="seg st"></div></div>
+          <div class="field lab-cengines"><span>${esc(LE.engines)}</span><div class="list"></div>
+            <div class="row"><button class="btn newe">${ico("sigma")}<span>${esc(LE.newEngine)}</span></button><button class="btn linke">${esc(LE.link)}</button></div></div>
           <p class="fname"></p>
         </div>
         <div class="lab-text"><h4>${esc(L.body)}</h4><div class="md"></div></div>
@@ -341,7 +379,47 @@ export async function mount(el, ctx) {
         { label: L.reveal, icon: "reveal", onClick: () => ctx.host.revealPath(cur.path) },
       ], r.right - 200, r.bottom + 4);
     });
+    drawEngines();
     drawBody();
+  }
+
+  async function drawEngines() {
+    const box = cardView.querySelector(".lab-cengines");
+    if (!box) return;
+    const all = (await ctx.call("skills")).skills;
+    const list_ = box.querySelector(".list");
+    list_.replaceChildren();
+    for (const n of cur.meta.skills) {
+      const s = all.find((x) => x.name === n);
+      const row = document.createElement("div");
+      row.className = "erow";
+      row.innerHTML = `<button class="ename" type="button">${ico("sigma")}<span></span></button>${s ? statusBadge(s.status) : ""}<button class="icon-btn x" type="button" title="${esc(LE.unlink)}">${ico("close")}</button>`;
+      row.querySelector(".ename span").textContent = n;
+      row.querySelector(".ename").disabled = !s;
+      row.querySelector(".ename").addEventListener("click", async () => { await flushSave(); openEngine(n, cur.name); });
+      row.querySelector(".x").addEventListener("click", async () => {
+        try { cur = await ctx.call("skill_link", { name: n, card: cur.name, on: false }); drawEngines(); } catch (e) { ctx.toast(e.message, "error"); }
+      });
+      list_.append(row);
+    }
+    box.querySelector(".newe").onclick = async () => {
+      const v = await ask(LE.newName, "", LE.newNote);
+      if (!v) return;
+      try {
+        await flushSave();
+        await ctx.call("skill_new", { name: v, card: cur.name });
+        copy(LE.askText(v, [cur.name]));
+        openEngine(v, cur.name);
+      } catch (e) { ctx.toast(e.message, "error"); }
+    };
+    const others = all.filter((s) => !cur.meta.skills.includes(s.name));
+    box.querySelector(".linke").hidden = !others.length;
+    box.querySelector(".linke").onclick = (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      ctx.contextMenu(others.map((s) => ({ label: s.name, icon: "sigma", onClick: async () => {
+        try { cur = await ctx.call("skill_link", { name: s.name, card: cur.name, on: true }); drawEngines(); } catch (er) { ctx.toast(er.message, "error"); }
+      } })), r.left, r.bottom + 4);
+    };
   }
 
   function drawBody() {
@@ -389,13 +467,14 @@ export async function mount(el, ctx) {
     } catch (e) { ctx.toast(e.message, "error"); }
   }
 
-  function ask(title, value) {
+  function ask(title, value, note = "") {
     return new Promise((resolve) => {
       const dlg = document.createElement("div");
       dlg.className = "lab-dlg";
       dlg.innerHTML = `<div class="lab-dlg-box small" role="dialog" aria-modal="true"><h3></h3><input type="text">
         <div class="btn-row"><span class="sp"></span><button class="btn cancel">${esc(L.cancel)}</button><button class="btn primary go">OK</button></div></div>`;
       dlg.querySelector("h3").textContent = title;
+      if (note) dlg.querySelector("h3").insertAdjacentHTML("afterend", `<p class="note">${esc(note)}</p>`);
       const inp = dlg.querySelector("input");
       inp.value = value;
       const done = (v) => { dlg.remove(); resolve(v); };
@@ -422,10 +501,12 @@ export async function mount(el, ctx) {
       const r = await ctx.call("poll");
       if (r.sig === sig) return;
       sig = r.sig;
-      if (cur) {
+      if (eng) {
+        eng.reload();
+      } else if (cur) {
         const before = cur.mtime;
         try { cur = await ctx.call("card", { name: cur.name }); } catch { return showHome(); }
-        if (cur.mtime !== before) { drawCard(true); ctx.toast(L.reloaded); }
+        if (cur.mtime !== before) { drawCard(true); ctx.toast(L.reloaded); } else drawEngines();
       } else {
         await refresh();
       }

@@ -41,6 +41,9 @@ def _load(name: str):
 
 cards = _load("cards")
 biblio = _load("biblio")
+verify = _load("verify")
+TEMPLATE = Path(__file__).with_name("skill_template")
+TEXT_EXTS = {".md", ".py", ".json", ".csv", ".txt"}
 
 
 class LabError(Exception):
@@ -181,6 +184,11 @@ def poll() -> dict:
         for p in sorted(d.iterdir()):
             if p.suffix.lower() in (".md", ".pdf") and p.is_file():
                 h.update(f"{p.name}:{p.stat().st_mtime_ns};".encode("utf-8", "surrogatepass"))
+    sk = f / SKILLS
+    if sk.is_dir():                                   # Claude が skill を書いた・直した
+        for p in sorted(sk.rglob("*")):
+            if p.is_file() and "__pycache__" not in p.parts:
+                h.update(f"{p.relative_to(sk).as_posix()}:{p.stat().st_mtime_ns};".encode("utf-8", "surrogatepass"))
     return {"sig": h.hexdigest()}
 
 
@@ -276,6 +284,10 @@ def import_pdfs(items: list, mode: str = "", lang: str = "ja") -> dict:
 
 # ---------- 1 枚のカード ----------
 def card(name: str) -> dict:
+    return card_(name)
+
+
+def card_(name: str) -> dict:
     p = _card_path(name)
     text = p.read_text(encoding="utf-8")
     try:
@@ -322,3 +334,109 @@ def rename(name: str, new: str) -> dict:
 
 def reveal(name: str = "") -> dict:
     return {"path": str(_card_path(name)) if name else str(_folder())}
+
+
+# ---------- skill（計算・検査エンジン） ----------
+def _skills_dir() -> Path:
+    d = _folder() / SKILLS
+    d.mkdir(exist_ok=True)
+    return d
+
+
+def _check_skill(name: str) -> str:
+    if not isinstance(name, str) or not verify.NAME_RE.match(name) or len(name) > 64:
+        raise LabError(f"skill の名前は英小文字・数字・ハイフンで（例: baffle-step）: {name}")
+    return name
+
+
+def _skill_dir(name: str) -> Path:
+    d = _skills_dir() / _check_skill(name)
+    if not (d.is_dir() and (d / "SKILL.md").is_file()):
+        raise LabError(f"skill が見つかりません: {name}")
+    return d
+
+
+def _users() -> dict[str, list[dict]]:
+    """skill 名 → それを使うカード（出典の論文）。"""
+    out: dict[str, list[dict]] = {}
+    for r in _cards():
+        for s in r["skills"]:
+            out.setdefault(s, []).append({"name": r["name"], "title": r["title"]})
+    return out
+
+
+def skills() -> dict:
+    users = _users()
+    rows = []
+    for d in sorted(_skills_dir().iterdir()):
+        if not (d.is_dir() and (d / "SKILL.md").is_file()):
+            continue
+        fm = verify._front((d / "SKILL.md").read_text(encoding="utf-8", errors="replace"))
+        li = verify.lint(d)
+        rows.append({"name": d.name, "description": fm.get("description", ""), "papers": users.get(d.name, []),
+                     "status": verify.status(d), "errors": len(li["errors"]), "warnings": len(li["warnings"])})
+    return {"skills": rows, "folder": str(_skills_dir()), "export": str(_folder() / EXPORT)}
+
+
+def _link(card: str, skill: str, on: bool = True) -> None:
+    p = _card_path(card)
+    meta, body = _parse(p)
+    have = cards.normalize(meta)["skills"]
+    new = (have + [skill]) if on and skill not in have else [s for s in have if s != skill or on]
+    if new != have:
+        meta["skills"] = new
+        _write_atomic(p, cards.dump(meta, body))
+
+
+def skill_new(name: str, card: str = "") -> dict:
+    """ひな形から skills/<名前>/ を作る。card を渡すとそのカードの skills に足す。"""
+    d = _skills_dir() / _check_skill(name)
+    if d.exists():
+        raise LabError(f"同じ名前の skill があります: {name}")
+    if card:
+        _card_path(card)
+    shutil.copytree(TEMPLATE, d, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    for f in ("SKILL.md", "README.md"):
+        p = d / f
+        _write_atomic(p, p.read_text(encoding="utf-8").replace("__NAME__", name))
+    if card:
+        _link(card, name, True)
+    return skill_view(name)
+
+
+def skill_link(name: str, card: str, on: bool = True) -> dict:
+    _skill_dir(name)
+    _link(card, name, bool(on))
+    return card_(card)
+
+
+def skill_view(name: str) -> dict:
+    """中身（人が読んでから検算する）・検査の結果・検算の状態。"""
+    d = _skill_dir(name)
+    files = []
+    for p in verify._files(d):
+        rel = p.relative_to(d).as_posix()
+        text = p.read_text(encoding="utf-8", errors="replace") if p.suffix.lower() in TEXT_EXTS and p.stat().st_size < 400_000 else None
+        files.append({"path": rel, "text": text, "size": p.stat().st_size})
+    order = {"SKILL.md": 0, "scripts/calc.py": 1, "scripts/check.py": 2, "examples.json": 3, "README.md": 4}
+    files.sort(key=lambda f: (order.get(f["path"], 9), f["path"]))
+    fm = verify._front((d / "SKILL.md").read_text(encoding="utf-8", errors="replace"))
+    return {"name": name, "path": str(d), "description": fm.get("description", ""), "files": files,
+            "lint": verify.lint(d), "status": verify.status(d), "papers": _users().get(name, [])}
+
+
+def skill_verify(name: str) -> dict:
+    """検算（利用者が中身を見て押す）。別プロセス・10 秒・skill のフォルダの中で。"""
+    d = _skill_dir(name)
+    r = verify.run(d)
+    r["status"] = verify.status(d)
+    return r
+
+
+def skill_zip(name: str) -> dict:
+    d = _skill_dir(name)
+    try:
+        z = verify.make_zip(d, _folder() / EXPORT)
+    except ValueError as e:
+        raise LabError(str(e))
+    return {"path": str(z), "file": z.name}

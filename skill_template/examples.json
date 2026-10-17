@@ -1,0 +1,7 @@
+{
+  "tolerance": {"default": {"rel": 0.02}},
+  "cases": [
+    {"name": "例1（ひな形の値。論文の表・図の値に置き換える）", "source": "表1 の 1 行目", "inputs": {"L": 0.5}, "expected": {"f": 171.5}},
+    {"name": "例2", "source": "表1 の 2 行目", "inputs": {"L": 0.25, "c": 340}, "expected": {"f": 340}}
+  ]
+}

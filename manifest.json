@@ -1,29 +1,88 @@
 {
   "id": "lab",
   "name": "ラボスケッチ",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "summary": "論文 1 本を md のカード 1 枚に。PDF から書誌を推定（オフライン）、Claude がまとめを書く。式を計算・検査エンジンの skill にする",
   "kind": "panel",
   "runtime": "python",
   "api": "api.py",
   "visibility": "public",
-  "requires": { "hub": ">=0.12", "moduleApi": 1 },
+  "requires": {
+    "hub": ">=0.12",
+    "moduleApi": 1
+  },
   "hub": {
     "window": "panel",
-    "size": [860, 760],
+    "size": [
+      860,
+      760
+    ],
     "ui": "ui/panel.js",
-    "tile": { "icon": "flask" }
+    "tile": {
+      "icon": "flask"
+    }
   },
   "exports": [
-    { "fn": "state", "summary": "保存先・カードの一覧・カードの無い PDF" },
-    { "fn": "poll", "summary": "外で変わったか（名前と更新時刻の要約）" },
-    { "fn": "inspect", "summary": "PDF の書誌を推定し、名前を提案する（まだ書かない）" },
-    { "fn": "import_pdfs", "summary": "PDF を papers に写して（移して）カードを作る" },
-    { "fn": "set_mode", "summary": "取り込みの既定（コピー / 移動）" },
-    { "fn": "card", "summary": "カードを読む" },
-    { "fn": "save_meta", "summary": "カードの書誌・タグ・状態を書き換える（本文はそのまま）" },
-    { "fn": "rename", "summary": "カードと PDF の名前を一緒に変える" },
-    { "fn": "reveal", "summary": "カード・保存先の場所" }
+    {
+      "fn": "state",
+      "summary": "保存先・カードの一覧・カードの無い PDF"
+    },
+    {
+      "fn": "poll",
+      "summary": "外で変わったか（名前と更新時刻の要約）"
+    },
+    {
+      "fn": "inspect",
+      "summary": "PDF の書誌を推定し、名前を提案する（まだ書かない）"
+    },
+    {
+      "fn": "import_pdfs",
+      "summary": "PDF を papers に写して（移して）カードを作る"
+    },
+    {
+      "fn": "set_mode",
+      "summary": "取り込みの既定（コピー / 移動）"
+    },
+    {
+      "fn": "card",
+      "summary": "カードを読む"
+    },
+    {
+      "fn": "save_meta",
+      "summary": "カードの書誌・タグ・状態を書き換える（本文はそのまま）"
+    },
+    {
+      "fn": "rename",
+      "summary": "カードと PDF の名前を一緒に変える"
+    },
+    {
+      "fn": "reveal",
+      "summary": "カード・保存先の場所"
+    },
+    {
+      "fn": "skills",
+      "summary": "エンジン（skill）の一覧と検算の状態"
+    },
+    {
+      "fn": "skill_new",
+      "summary": "ひな形からエンジンを作る（カードにつなぐ）"
+    },
+    {
+      "fn": "skill_link",
+      "summary": "エンジンをカードにつなぐ・外す"
+    },
+    {
+      "fn": "skill_view",
+      "summary": "エンジンの中身・動かす前の検査・検算の状態"
+    },
+    {
+      "fn": "skill_verify",
+      "summary": "検算（別プロセス・10 秒・利用者が押したときだけ）"
+    },
+    {
+      "fn": "skill_zip",
+      "summary": "検算済みのエンジンを Claude 登録用の zip にする（export）"
+    }
   ],
   "locales": {
     "en": {
