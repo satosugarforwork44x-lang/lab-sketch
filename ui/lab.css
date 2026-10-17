@@ -1,0 +1,93 @@
+/* ラボスケッチ。色は Hub の CSS 変数だけを使う */
+.lab { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.lab [hidden] { display: none !important; }
+.lab .sp, .lab-dlg .sp { flex: 1; }
+.lab .icon, .lab-dlg .icon { width: 16px; height: 16px; flex: none; }
+
+/* ---- 一覧 ---- */
+.lab-home { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.lab-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px 0; }
+.lab-filter { padding: 8px 16px 10px; }
+.lab-q {
+  flex: 1 1 200px; min-width: 160px; height: 32px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--pill, 999px);
+  background: var(--well); color: var(--text); font: 13px var(--font);
+}
+.lab-q:focus, .lab input:focus, .lab textarea:focus, .lab-dlg input:focus, .lab-dlg textarea:focus { outline: none; border-color: var(--signal); }
+.lab-seg { flex: none; }
+.lab-seg button, .lab .seg button, .lab-dlg .seg button { height: 26px; padding: 0 12px; font: 12px var(--font); }
+.lab-bar .select { height: 32px; min-width: 112px; max-width: 180px; }
+.lab-add { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; }
+
+.lab-notes { display: grid; gap: 6px; padding: 0 16px; }
+.lab-notes:empty { display: none; }
+.lab-note {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r);
+  background: var(--tint); font-size: 12.5px;
+}
+.lab-note .sm { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lab-note code { flex: 1 1 260px; min-width: 0; padding: 4px 8px; border-radius: var(--r-s); background: var(--well); font: 11.5px Consolas, monospace; overflow-wrap: anywhere; }
+.lab-note .btn { height: 26px; padding: 0 12px; font-size: 12px; }
+
+.lab-list { flex: 1; overflow: auto; display: grid; align-content: start; gap: 2px; padding: 8px 10px 20px; }
+.lab-none { margin: 18px 8px; color: var(--faint); font-size: 13px; }
+.lab-row {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 6px 10px;
+  border: 0; border-radius: var(--r-s); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background .15s;
+}
+.lab-row:hover { background: var(--ink-2); }
+.lab-row:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
+.lab-row .main { display: grid; gap: 2px; min-width: 0; }
+.lab-row .t { font-size: 13.5px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lab-row .m { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lab-row .side { display: grid; justify-items: end; gap: 4px; max-width: 240px; }
+.lab-row .tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.lab-row .chip { height: 20px; padding: 0 8px; font-size: 11px; color: var(--muted); }
+.lab-row .info { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--faint); }
+.lab-row .info .icon { width: 13px; height: 13px; margin-right: 3px; vertical-align: -2px; color: var(--signal); }
+.lab .warn { color: var(--danger); }
+
+.st { justify-self: start; padding: 3px 8px; border-radius: var(--pill, 999px); font-size: 11px; white-space: nowrap; background: var(--ink-2); color: var(--muted); }
+.st-read { background: var(--tint); color: var(--text); }
+.st-cite { background: var(--primary); color: var(--primary-text, var(--text)); }
+
+/* ---- 1 枚のカード ---- */
+.lab-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.lab-cbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.lab-cbar .btn { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 12.5px; }
+.lab-cbody { flex: 1; overflow: auto; display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; padding: 16px 18px 28px; }
+@media (max-width: 680px) { .lab-cbody { grid-template-columns: 1fr; } }
+.lab-meta { display: grid; gap: 10px; }
+.lab-meta .err { margin: 0; padding: 8px 10px; border-radius: var(--r-s); background: var(--well); color: var(--danger); font-size: 12px; }
+.lab-meta .fname { margin: 4px 0 0; font-size: 11px; color: var(--faint); overflow-wrap: anywhere; }
+.lab label, .lab .field, .lab-dlg label { display: grid; gap: 4px; min-width: 0; }
+.lab label > span, .lab .field > span, .lab-dlg label > span { font-size: 11.5px; color: var(--muted); }
+.lab input, .lab textarea, .lab-dlg input, .lab-dlg textarea {
+  width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r-s);
+  background: var(--well); color: var(--text); font: 13px/1.5 var(--font);
+}
+.lab textarea, .lab-dlg textarea { resize: vertical; }
+.lab .pair, .lab-dlg .pair { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
+.lab-text h4 { margin: 2px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+.lab-text .md { padding: 4px 16px 12px; border-radius: var(--r); background: var(--ink-2); }
+.lab-text h5 { margin: 14px 0 4px; font-size: 13px; font-weight: 600; }
+.lab-text p { margin: 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lab-text .lab-none { margin: 12px 0; }
+
+/* ---- 小窓（取り込み・名前） ---- */
+.lab-dlg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 0, 0, .35); }
+.lab-dlg-box { width: min(640px, 92vw); max-height: 88vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; padding: 18px 20px; border-radius: var(--r-l); background: var(--solid-2); box-shadow: var(--shadow); }
+.lab-dlg-box.small { width: min(420px, 90vw); grid-template-rows: auto auto auto; }
+.lab-dlg-box h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.lab-dlg-box .note { margin: 0; font-size: 12px; color: var(--muted); }
+.lab-dlg .btn-row { display: flex; align-items: center; gap: 8px; }
+.lab-dlg .btn-row .seg:empty { display: none; }
+.lab-imp { overflow: auto; display: grid; gap: 12px; padding-right: 4px; }
+.lab-imp-row { display: grid; gap: 8px; padding: 12px; border-radius: var(--r); background: var(--ink-2); }
+.lab-imp-row .file { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.lab-imp-row label.wide { position: relative; }
+.lab-imp-row .ext { position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: var(--faint); pointer-events: none; }
+.lab-imp-row .nm { padding-right: 72px; }
+.lab-imp-row .msg { font-size: 11.5px; color: var(--muted); }
+.lab-imp-row .msg:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .lab-row { transition: none; } }
