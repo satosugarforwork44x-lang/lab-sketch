@@ -11,6 +11,8 @@ const L = EN ? {
   search: "Search title, author, tag", all: "All", status: { unread: "Unread", read: "Read", cite: "To cite" },
   anyTag: "All tags", anyYear: "All years", add: "Add PDFs…", folder: "Show the folder", more: "More",
   empty: "No papers yet. Drop PDFs here, or into the “Lab Sketch” folder in Hub.", noMatch: "Nothing matches",
+  bib: (n) => `Export ${n} shown paper${n > 1 ? "s" : ""} as BibTeX`, refs: (n) => `Export ${n} shown paper${n > 1 ? "s" : ""} as a reference list (.md)`,
+  exported: (f) => `Saved ${f} and copied it`,
   pending: (n) => `${n} PDF${n > 1 ? "s" : ""} without a card`, pendingGo: "Make cards",
   noPdf: "PyMuPDF is not installed, so titles and authors can't be read from PDFs (cards are still made from the file name). To install:",
   copy: "Copy", copied: "Copied", back: "All papers", openPdf: "Open the PDF", openCard: "Open the card", reveal: "Show in Explorer",
@@ -27,6 +29,8 @@ const L = EN ? {
   search: "題名・著者・タグでさがす", all: "すべて", status: { unread: "未読", read: "読んだ", cite: "引用する" },
   anyTag: "すべてのタグ", anyYear: "すべての年", add: "PDF を取り込む…", folder: "フォルダを見る", more: "その他",
   empty: "まだありません。PDF をここに落とすか、Hub のフォルダ窓「Lab Sketch」に入れてください。", noMatch: "当てはまる論文がありません",
+  bib: (n) => `表示中の ${n} 件を BibTeX に書き出す`, refs: (n) => `表示中の ${n} 件を参考文献の一覧（md）に書き出す`,
+  exported: (f) => `${f} に書き出して、コピーしました`,
   pending: (n) => `カードの無い PDF が ${n} 件あります`, pendingGo: "カードを作る",
   noPdf: "PyMuPDF が入っていないので、PDF から題名・著者を読めません（カードはファイル名で作れます）。入れるには:",
   copy: "コピー", copied: "コピーしました", back: "一覧に戻る", openPdf: "PDF を開く", openCard: "カードを開く", reveal: "エクスプローラーで見る",
@@ -105,13 +109,24 @@ export async function mount(el, ctx) {
   $(".lab-more").title = L.more;
   $(".lab-more").addEventListener("click", (e) => {
     const r = e.currentTarget.getBoundingClientRect();
+    const shown = st.cards.filter(match).map((c) => c.name);
     ctx.contextMenu([
-      { label: L.folder, icon: "folder", onClick: () => ctx.host.openPath(st.folder) },
+      { label: L.folder, icon: ico("folder"), onClick: () => ctx.host.openPath(st.folder) },
+      "-",
+      { label: L.bib(shown.length), icon: ico("bookOpen"), disabled: !shown.length || mode !== "papers", onClick: () => exportRefs(shown, "bib") },
+      { label: L.refs(shown.length), icon: ico("text"), disabled: !shown.length || mode !== "papers", onClick: () => exportRefs(shown, "md") },
       "-",
       { label: (st.mode === "copy" ? "✓ " : "　") + L.modeCopy, onClick: () => setMode("copy") },
       { label: (st.mode === "move" ? "✓ " : "　") + L.modeMove, onClick: () => setMode("move") },
     ], r.left, r.bottom + 4);
   });
+  async function exportRefs(names, kind) {
+    try {
+      const r = await ctx.call("export_refs", { names, kind, lang: EN ? "en" : "ja" });
+      try { await navigator.clipboard.writeText(r.text); } catch { /* コピーできなくてもファイルはある */ }
+      ctx.toast(L.exported(r.file));
+    } catch (e) { ctx.toast(e.message, "error"); }
+  }
   async function setMode(m) { st.mode = (await ctx.call("set_mode", { mode: m })).mode; }
 
   function filters() {
@@ -374,9 +389,9 @@ export async function mount(el, ctx) {
     q(".more").addEventListener("click", (e) => {
       const r = e.currentTarget.getBoundingClientRect();
       ctx.contextMenu([
-        { label: L.openCard, icon: "open", onClick: () => ctx.host.openFile(cur.path).catch((er) => ctx.toast(er.message, "error")) },
-        { label: L.rename, icon: "rename", onClick: renameCard },
-        { label: L.reveal, icon: "reveal", onClick: () => ctx.host.revealPath(cur.path) },
+        { label: L.openCard, icon: ico("open"), onClick: () => ctx.host.openFile(cur.path).catch((er) => ctx.toast(er.message, "error")) },
+        { label: L.rename, icon: ico("rename"), onClick: renameCard },
+        { label: L.reveal, icon: ico("reveal"), onClick: () => ctx.host.revealPath(cur.path) },
       ], r.right - 200, r.bottom + 4);
     });
     drawEngines();
@@ -416,7 +431,7 @@ export async function mount(el, ctx) {
     box.querySelector(".linke").hidden = !others.length;
     box.querySelector(".linke").onclick = (e) => {
       const r = e.currentTarget.getBoundingClientRect();
-      ctx.contextMenu(others.map((s) => ({ label: s.name, icon: "sigma", onClick: async () => {
+      ctx.contextMenu(others.map((s) => ({ label: s.name, icon: ico("sigma"), onClick: async () => {
         try { cur = await ctx.call("skill_link", { name: s.name, card: cur.name, on: true }); drawEngines(); } catch (er) { ctx.toast(er.message, "error"); }
       } })), r.left, r.bottom + 4);
     };

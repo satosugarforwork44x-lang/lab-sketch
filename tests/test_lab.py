@@ -175,6 +175,17 @@ class ApiTest(unittest.TestCase):
         self.assertFalse(dropped.exists())
         self.assertEqual(self.api.state()["pending"], [])
 
+    def test_export_refs_never_overwrites(self):
+        src = self._fake_pdf("r.pdf")
+        self.api.import_pdfs([{"path": str(src), "name": "a", "title": "Edge Effects", "authors": ["J. Smith"], "year": "2020"}], "copy")
+        r1 = self.api.export_refs(["a"], "bib")
+        r2 = self.api.export_refs(["a"], "bib")
+        self.assertEqual((r1["file"], r2["file"]), ("references.bib", "references (2).bib"))
+        self.assertIn("@article{smith2020edge,", r1["text"])
+        self.assertTrue(self.api.export_refs(["a"], "md", "en")["text"].startswith("# References"))
+        with self.assertRaises(self.api.LabError):
+            self.api.export_refs([], "bib")
+
     def test_japanese_names(self):
         src = self._fake_pdf("山田の論文.pdf")
         self.api.import_pdfs([{"path": str(src), "name": "2022_山田_バッフル段差"}], "copy")
@@ -307,6 +318,26 @@ class SkillTest(ApiTest.__bases__[0]):
         for n in ("Baffle", "baffle_step", "../x", "-a", "a" * 65):
             with self.assertRaises(self.api.LabError):
                 self.api.skill_new(n)
+
+
+class CiteTest(unittest.TestCase):
+    def setUp(self):
+        self.c = _load("cite")
+
+    def test_keys_and_escape(self):
+        ms = [{"title": "Baffle Step & 50% Loss", "authors": ["John Smith", "Akiko Tanaka"], "year": 2024, "doi": "10.1/x_y"},
+              {"title": "Baffle Steps Again", "authors": ["Smith, J."], "year": 2024},
+              {"title": "小型スピーカーの補正", "authors": ["山田 太郎"], "year": 2021},
+              {"title": "", "authors": ["Müller, K."], "year": ""}]
+        self.assertEqual(self.c.unique_keys(ms), ["smith2024bafflea", "smith2024baffleb", "ref2021", "muller"])
+        b = self.c.bibtex(ms)
+        self.assertIn("@article{smith2024bafflea,", b)
+        self.assertIn(r"title = {{Baffle Step \& 50\% Loss}}", b)
+        self.assertIn("author = {John Smith and Akiko Tanaka}", b)
+        self.assertIn("doi = {10.1/x_y}", b)
+        self.assertEqual(b.count("{") , b.count("}"))
+        md = self.c.reference_list(ms, "ja")
+        self.assertIn("- John Smith、Akiko Tanaka (2024). Baffle Step & 50% Loss. https://doi.org/10.1/x_y", md)
 
 
 if __name__ == "__main__":

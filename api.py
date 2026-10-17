@@ -42,6 +42,7 @@ def _load(name: str):
 cards = _load("cards")
 biblio = _load("biblio")
 verify = _load("verify")
+cite = _load("cite")
 TEMPLATE = Path(__file__).with_name("skill_template")
 TEXT_EXTS = {".md", ".py", ".json", ".csv", ".txt"}
 
@@ -440,3 +441,26 @@ def skill_zip(name: str) -> dict:
     except ValueError as e:
         raise LabError(str(e))
     return {"path": str(z), "file": z.name}
+
+
+# ---------- 引用の書き出し ----------
+def export_refs(names: list, kind: str = "bib", lang: str = "ja") -> dict:
+    """選んだカードを export/references.bib か references.md に（上書きしない）。中身も返す（コピー用）。"""
+    if kind not in ("bib", "md"):
+        raise LabError("bib か md")
+    metas = []
+    for n in names or []:
+        meta, _ = _parse(_card_path(str(n)))
+        metas.append(cards.normalize(meta))
+    if not metas:
+        raise LabError("書き出す論文がありません")
+    text = cite.bibtex(metas) if kind == "bib" else cite.reference_list(metas, lang if lang in ("ja", "en") else "ja")
+    out = _folder() / EXPORT
+    out.mkdir(exist_ok=True)
+    p = out / f"references.{kind}"
+    i = 2
+    while p.exists():
+        p = out / f"references ({i}).{kind}"
+        i += 1
+    _write_atomic(p, text)
+    return {"path": str(p), "file": p.name, "text": text, "count": len(metas)}

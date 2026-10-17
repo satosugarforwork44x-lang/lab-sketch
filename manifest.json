@@ -1,7 +1,7 @@
 {
   "id": "lab",
   "name": "ラボスケッチ",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "summary": "論文 1 本を md のカード 1 枚に。PDF から書誌を推定（オフライン）、Claude がまとめを書く。式を計算・検査エンジンの skill にする",
   "kind": "panel",
   "runtime": "python",
@@ -82,6 +82,10 @@
     {
       "fn": "skill_zip",
       "summary": "検算済みのエンジンを Claude 登録用の zip にする（export）"
+    },
+    {
+      "fn": "export_refs",
+      "summary": "選んだ論文を BibTeX・参考文献の一覧（md）に書き出す（export）"
     }
   ],
   "locales": {
